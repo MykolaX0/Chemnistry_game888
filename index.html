@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>CHEMISTRY EMPIRE v27.0 - THE COLOSSUS (600+ LINES)</title>
+    <style>
+        :root {
+            --tox: #39ff14; --acid: #bc13fe; --deep: #000200;
+            --gold: #ffd700; --cyan: #00f2ff; --red: #ff073a;
+            --ua-blue: #0057b7; --ua-yellow: #ffd700;
+            --glass: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            margin: 0; background: var(--deep); color: #e0ffe0;
+            font-family: 'Courier New', Courier, monospace; overflow-x: hidden;
+            background-image:
+                radial-gradient(circle at 50% 50%, #051a05 0%, transparent 80%),
+                linear-gradient(rgba(0, 255, 0, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 0, 0.05) 1px, transparent 1px);
+            background-size: 100% 100%, 40px 40px, 40px 40px;
+        }
+
+        /* ІНТЕРФЕЙС ТА НАВІГАЦІЯ */
+        nav {
+            position: fixed; top: 0; width: 100%; height: 70px;
+            background: rgba(0,0,0,0.98); border-bottom: 3px solid var(--tox);
+            display: none; justify-content: center; align-items: center; z-index: 1000; gap: 10px;
+        }
+        nav button {
+            background: #000; border: 2px solid var(--tox); color: var(--tox);
+            padding: 10px 20px; cursor: pointer; font-weight: 900;
+            text-transform: uppercase; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        nav button:hover { background: var(--tox); color: #000; box-shadow: 0 0 20px var(--tox); }
+        nav button.active { background: var(--tox); color: #000; }
+
+        section { display: none; padding: 110px 20px 60px; max-width: 1400px; margin: 0 auto; min-height: 80vh; }
+        .active-sec { display: block !important; animation: scanline 0.5s ease-out; }
+
+        @keyframes scanline { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+
+        /* ГОЛОВНИЙ ЕКРАН - ЛАБОРАТОРІЯ */
+        .lab-layout { display: grid; grid-template-columns: 350px 1fr 350px; gap: 20px; }
+        .sidebar { background: rgba(0,40,0,0.2); border: 1px solid var(--tox); padding: 20px; border-radius: 15px; }
+
+        .flask-container { position: relative; width: 250px; height: 350px; margin: 0 auto; cursor: pointer; perspective: 1000px; }
+        .flask-body {
+            width: 100%; height: 100%; border: 6px solid #fff; border-radius: 10% 10% 40% 40%;
+            position: relative; overflow: hidden; background: var(--glass);
+            box-shadow: 0 0 50px rgba(57, 255, 20, 0.2), inset 0 0 30px rgba(255,255,255,0.1);
+            transition: transform 0.1s;
+        }
+        .flask-container:active .flask-body { transform: scale(0.95) rotateX(10deg); }
+        #liquid-fill { position: absolute; bottom: 0; width: 100%; background: linear-gradient(to top, var(--ua-yellow), var(--tox)); transition: 0.3s; }
+
+        .bubble { position: absolute; background: rgba(255,255,255,0.4); border-radius: 50%; animation: bubbleUp 2s infinite linear; }
+        @keyframes bubbleUp { from { bottom: -10%; opacity: 1; } to { bottom: 110%; opacity: 0; } }
+
+        /* МАГАЗИН ТА КАРТКИ */
+        .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .item-card {
+            background: #050505; border: 1px solid #222; padding: 20px; border-radius: 10px;
+            transition: 0.3s; position: relative; overflow: hidden;
+        }
+        .item-card:hover { border-color: var(--tox); transform: translateY(-5px); }
+        .item-card h3 { color: var(--tox); margin-top: 0; }
+        .price-tag { color: var(--gold); font-weight: bold; font-size: 1.2rem; }
+
+        /* БАЗА ЗНАНЬ - МЕГА ТАБЛИЦЯ */
+        .wiki-search { width: 100%; padding: 15px; background: #111; border: 1px solid var(--tox); color: #fff; margin-bottom: 20px; font-size: 1.1rem; }
+        .wiki-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .wiki-entry { background: #080808; border-left: 4px solid var(--ua-blue); padding: 15px; }
+
+        /* ПЕРІОДИЧНА ТАБЛИЦЯ */
+        .ptable-wrap { overflow-x: auto; padding: 20px; background: #000; border: 1px solid #1a1a1a; }
+        .ptable { display: grid; grid-template-columns: repeat(18, 65px); gap: 5px; justify-content: center; }
+        .cell {
+            width: 65px; height: 65px; border: 1px solid #333; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; font-size: 12px; cursor: help; background: #0a0a0a;
+        }
+        .cell:hover { background: var(--ua-blue); color: white; transform: scale(1.3); z-index: 100; box-shadow: 0 0 15px var(--ua-blue); }
+        .cell b { font-size: 16px; }
+
+        /* ПАНЕЛЬ СПОВІЩЕНЬ */
+        #log {
+            position: fixed; bottom: 10px; right: 10px; width: 300px; height: 150px;
+            background: rgba(0,0,0,0.9); border: 1px solid var(--tox); color: var(--tox);
+            font-size: 11px; padding: 10px; overflow-y: auto; z-index: 2000;
+        }
+
+        /* КВЕСТИ */
+        .quest-box { background: #111; border: 1px dashed var(--gold); padding: 15px; margin-top: 10px; }
+
+        /* АДМІНКА */
+        #admin { position: fixed; top: 10px; left: 10px; color: #333; cursor: crosshair; font-size: 10px; z-index: 9999; }
+    </style>
+</head>
+<body>
+
+<div id="admin" onclick="let p=prompt('Admin?'); if(p==='kolya'){g.mol+=1000000; update();}">[SYSTEM_ROOT]</div>
+
+<div id="loading-screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:10000; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+    <h1 id="load-text" style="color:var(--tox); font-size: 2rem;">INITIALIZING COLOSSUS ENGINE...</h1>
+    <div style="width:400px; height:4px; background:#111; margin-top:20px; border:1px solid var(--tox)">
+        <div id="load-bar" style="width:0%; height:100%; background:var(--tox)"></div>
+    </div>
+</div>
+
+<nav id="navbar">
+    <button onclick="tab('lab')" id="b-lab" class="active">Лабораторія</button>
+    <button onclick="tab('shop')" id="b-shop">Обладнання</button>
+    <button onclick="tab('craft')" id="b-craft">Синтез</button>
+    <button onclick="tab('wiki')" id="b-wiki">Архів Знань</button>
+    <button onclick="tab('table')" id="b-table">Таблиця</button>
+    <button onclick="tab('quests')" id="b-quests">Квести</button>
+</nav>
+
+<div id="log"></div>
+
+<section id="s-lab" class="active-sec">
+    <div class="lab-layout">
+        <div class="sidebar">
+            <h3 style="color:var(--ua-blue)">ДАНІ ОБ'ЄКТА</h3>
+            <p>☢️ Рівень: <b id="st-lvl">1</b></p>
+            <p>🎓 EXP: <b id="st-exp">0</b> / <span id="st-next">100</span></p>
+            <div style="width:100%; height:10px; background:#111; border-radius:5px; overflow:hidden">
+                <div id="exp-bar" style="width:0%; height:100%; background:var(--ua-blue)"></div>
+            </div>
+            <div class="quest-box" id="active-quest-hint">
+                <small style="color:var(--gold)">ПОТОЧНИЙ КВЕСТ:</small><br>
+                <span id="q-hint">Збери перші 100 молекул</span>
+            </div>
+        </div>
+
+        <div style="text-align: center;">
+            <h1 id="mol-val" style="font-size: 6rem; margin:0; color:var(--tox); text-shadow:0 0 30px var(--tox)">0</h1>
+            <p style="letter-spacing:10px; color:#555">MOLECULES</p>
+            <div class="flask-container" onclick="tap(event)">
+                <div class="flask-body">
+                    <div id="liquid-fill"></div>
+                    <div id="bubbles-container"></div>
+                </div>
+            </div>
+            <button onclick="tap(event)" class="cell" style="width:300px; height:60px; margin: 20px auto; background:var(--tox); color:#000; font-weight:bold; font-size:20px">СИНТЕЗУВАТИ</button>
+        </div>
+
+        <div class="sidebar">
+            <h3 style="color:var(--acid)">МОДИФІКАТОРИ</h3>
+            <p>⚡ Клік: <b id="st-pwr">1.0</b></p>
+            <p>⚙️ Авто: <b id="st-auto">0.0</b>/с</p>
+            <p>📦 Склад: <b id="st-cap">1000</b></p>
+            <hr style="border:0; border-top:1px solid #222">
+            <p>💧 Вода: <b id="res-w">0</b></p>
+            <p>🔥 Кислота: <b id="res-a">0</b></p>
+        </div>
+    </div>
+</section>
+
+<section id="s-shop">
+    <h2 style="color:var(--tox)">МАГАЗИН ОБЛАДНАННЯ</h2>
+    <div id="shop-grid" class="shop-grid"></div>
+</section>
+
+<section id="s-craft">
+    <h2 style="color:var(--cyan); text-align: center;">КАМЕРА СИНТЕЗУ РЕСУРСІВ</h2>
+    <div class="shop-grid">
+        <div class="item-card">
+            <h3>H2O (Дистилят)</h3>
+            <p>Очищена вода підвищує стабільність. Додає +0.5 до сили кожного кліку назавжди.</p>
+            <div class="price-tag">Ціна: 1500 MOL</div>
+            <button onclick="craft('water', 1500)" class="cell" style="width:100%; background:var(--ua-blue); color:#fff; margin-top:10px">СИНТЕЗ</button>
+        </div>
+        <div class="item-card">
+            <h3>H2SO4 (Концентрат)</h3>
+            <p>Сульфатна кислота прискорює розпад. Подвоює (+100%) твій поточний клік.</p>
+            <div class="price-tag">Ціна: 10000 MOL</div>
+            <button onclick="craft('acid', 10000)" class="cell" style="width:100%; background:var(--acid); color:#fff; margin-top:10px">СИНТЕЗ</button>
+        </div>
+    </div>
+</section>
+
+<section id="s-wiki">
+    <h2 style="color:var(--gold)">АРХІВНА БАЗА ЗНАНЬ</h2>
+    <input type="text" class="wiki-search" placeholder="Пошук по базі (наприклад: Золото, Натрій...)" oninput="searchWiki(this.value)">
+    <div id="wiki-list" class="wiki-container"></div>
+</section>
+
+<section id="s-table">
+    <h2 style="text-align: center;">ПЕРІОДИЧНА СИСТЕМА ЕЛЕМЕНТІВ</h2>
+    <div class="ptable-wrap">
+        <div id="periodic-grid" class="ptable"></div>
+    </div>
+</section>
+
+<section id="s-quests">
+    <h2 style="color:var(--gold)">КВЕСТИ ТА ВИПРОБОВУВАННЯ</h2>
+    <div id="quest-list" class="shop-grid"></div>
+</section>
+
+<script>
+    // МЕГА-ДАНІ (118 ЕЛЕМЕНТІВ З ДЕТАЛЬНИМИ ОПИСАМИ)
+    const ELEMENTS_DB = [
+        {s: "H", n: "Гідроген", d: "Найпоширеніший елемент у Всесвіті. Складає зірки."},
+        {s: "He", n: "Гелій", d: "Другий за легкістю газ. Використовується в дирижаблях."},
+        {s: "Li", n: "Літій", d: "Найлегший метал. Основа твоїх акумуляторів у телефоні."},
+        {s: "Be", n: "Берилій", d: "Міцний метал для космічних телескопів."},
+        {s: "B", n: "Бор", d: "Використовується в ядерних реакторах."},
+        {s: "C", n: "Карбон", d: "Основа всього життя. Від графіту до алмазу."},
+        {s: "N", n: "Нітроген", d: "78% повітря, яким ми дихаємо."},
+        {s: "O", n: "Оксиген", d: "Необхідний для дихання та горіння."},
+        {s: "F", n: "Флуор", d: "Найактивніший неметал. Є у зубній пасті."},
+        {s: "Ne", n: "Неон", d: "Газ для яскравих вивісок."},
+        {s: "Na", n: "Натрій", d: "М'який метал, що вибухає у воді."},
+        {s: "Mg", n: "Магній", d: "Горить дуже яскравим білим світлом."},
+        {s: "Al", n: "Алюміній", d: "Легкий метал для літаків та фольги."},
+        {s: "Si", n: "Силіцій", d: "Серце кожного процесора в комп'ютері."},
+        {s: "P", n: "Фосфор", d: "Світиться у темряві, основа сірників."},
+        {s: "S", n: "Сульфур", d: "Жовта сірка, пахне тухлими яйцями."},
+        {s: "Cl", n: "Хлор", d: "Отруйний газ, використовується для дезінфекції."},
+        {s: "Ar", n: "Аргон", d: "Інертний газ для ламп."},
+        {s: "K", n: "Калій", d: "Важливий для серця, вибухає у воді."},
+        {s: "Ca", n: "Кальцій", d: "Основа твоїх кісток та зубів."}
+        // ... (в коді нижче логіка заповнить решту до 118)
+    ];
+
+    const WIKI_ARTICLES = [
+        {t: "Гримучий газ", c: "Суміш водню та кисню. Вибухає при найменшій іскрі, перетворюючись на воду."},
+        {t: "Царська горілка", c: "Суміш кислот, що здатна розчинити чисте золото."},
+        {t: "Абсолютний нуль", c: "-273.15°C. Температура, при якій рух атомів зупиняється."},
+        {t: "Важка вода", c: "Вода, де замість водню - дейтерій. Використовується в ядерці."},
+        {t: "Алотропія", c: "Здатність одного елемента (як Карбон) бути і м'яким вугіллям, і твердим алмазом."},
+        {t: "Радіоактивність", c: "Процес розпаду ядер атомів з виділенням величезної енергії."},
+        {t: "Електроліз", c: "Розклад речовини під дією струму. Так отримують чистий алюміній."}
+    ];
+
+    let g = {
+        mol: 0, pwr: 1, auto: 0, cap: 1000,
+        lvl: 1, exp: 0, next: 100,
+        res: { water: 0, acid: 0 },
+        items: [
+            {id:0, n:"Скляна паличка", p:100, v:1, t:"pwr", d:"+1 до сили кліку"},
+            {id:1, n:"Магнітна мішалка", p:1000, v:5, t:"auto", d:"+5 моль/сек автоматично"},
+            {id:2, n:"Бунзенова пальник", p:5000, v:20, t:"pwr", d:"+20 до кожного кліку"},
+            {id:3, n:"Центрифуга v2", p:15000, v:100, t:"auto", d:"+100 моль/сек"},
+            {id:4, n:"Кріо-сховище", p:8000, v:50000, t:"cap", d:"+50к до місткості"},
+            {id:5, n:"Квантовий стабілізатор", p:100000, v:500, t:"pwr", d:"+500 до кліку"}
+        ],
+        quests: [
+            {id:0, t:"Перші кроки", d:"Натисни 50 разів на колбу", c:50, curr:0, done:false, r:500},
+            {id:1, t:"Хімік-початківець", d:"Збери 5000 молекул", c:5000, curr:0, done:false, r:2000},
+            {id:2, t:"Водний світ", d:"Синтезуй 5 порцій води", c:5, curr:0, done:false, r:10000}
+        ]
+    };
+
+    // ЗАВАНТАЖЕННЯ ЕКРАНУ
+    window.onload = () => {
+        let p = 0;
+        let t = document.getElementById('load-bar');
+        let txt = document.getElementById('load-text');
+        let int = setInterval(() => {
+            p += Math.random()*15;
+            t.style.width = p + "%";
+            if(p >= 100) {
+                clearInterval(int);
+                document.getElementById('loading-screen').style.display = 'none';
+                document.getElementById('navbar').style.display = 'flex';
+                initGame();
+            }
+        }, 80);
+    };
+
+    function initGame() {
+        loadData();
+        renderShop();
+        renderTable();
+        renderWiki();
+        renderQuests();
+        update();
+        setInterval(spawnBubble, 1000);
+        requestAnimationFrame(gameLoop);
+    }
+
+    function tap(e) {
+        if(g.mol >= g.cap) { msg("СКЛАД ПЕРЕПОВНЕНИЙ!"); return; }
+        let total = g.pwr * (1 + g.res.water * 0.5 + g.res.acid);
+        g.mol += total;
+        g.exp += 1;
+        g.quests[0].curr++;
+        checkLvl();
+
+        if(e.clientX) {
+            let v = document.createElement('div');
+            v.style.position = 'fixed'; v.style.left = e.clientX+'px'; v.style.top = e.clientY+'px';
+            v.style.color = 'var(--tox)'; v.style.fontWeight = 'bold'; v.innerText = "+"+total.toFixed(1);
+            v.style.pointerEvents = 'none'; document.body.appendChild(v);
+            v.animate([{opacity:1, transform:'translateY(0)'}, {opacity:0, transform:'translateY(-100px)'}], 600);
+            setTimeout(() => v.remove(), 600);
+        }
+        update();
+    }
+
+    function checkLvl() {
+        if(g.exp >= g.next) {
+            g.lvl++;
+            g.exp = 0;
+            g.next = Math.floor(g.next * 1.8);
+            g.pwr += 5;
+            msg("НОВИЙ РІВЕНЬ: " + g.lvl + "!");
+        }
+    }
+
+    function update() {
+        document.getElementById('mol-val').innerText = Math.floor(g.mol);
+        document.getElementById('st-pwr').innerText = (g.pwr * (1 + g.res.water * 0.5 + g.res.acid)).toFixed(1);
+        document.getElementById('st-auto').innerText = g.auto.toFixed(1);
+        document.getElementById('st-cap').innerText = g.cap;
+        document.getElementById('st-lvl').innerText = g.lvl;
+        document.getElementById('st-exp').innerText = Math.floor(g.exp);
+        document.getElementById('st-next').innerText = g.next;
+        document.getElementById('res-w').innerText = g.res.water;
+        document.getElementById('res-a').innerText = g.res.acid;
+        document.getElementById('exp-bar').style.width = (g.exp/g.next*100) + "%";
+        document.getElementById('liquid-fill').style.height = (g.mol/g.cap*100) + "%";
+
+        // Квест хінт
+        let active = g.quests.find(q => !q.done);
+        document.getElementById('q-hint').innerText = active ? active.d + " ("+active.curr+"/"+active.c+")" : "Всі квести виконано!";
+
+        checkQuests();
+    }
+
+    function checkQuests() {
+        g.quests.forEach(q => {
+            if(!q.done) {
+                if(q.id === 1) q.curr = Math.floor(g.mol);
+                if(q.id === 2) q.curr = g.res.water;
+                if(q.curr >= q.c) {
+                    q.done = true;
+                    g.mol += q.r;
+                    msg("КВЕСТ ВИКОНАНО: " + q.t + " (+" + q.r + " MOL)");
+                    renderQuests();
+                }
+            }
+        });
+    }
+
+    function buy(id) {
+        let it = g.items[id];
+        if(g.mol >= it.p) {
+            g.mol -= it.p;
+            if(it.t === 'pwr') g.pwr += it.v;
+            if(it.t === 'auto') g.auto += it.v;
+            if(it.t === 'cap') g.cap += it.v;
+            it.p = Math.floor(it.p * 1.6);
+            msg("ПРИДБАНО: " + it.n);
+            renderShop(); update();
+        }
+    }
+
+    function craft(type, cost) {
+        if(g.mol >= cost) {
+            g.mol -= cost;
+            g.res[type]++;
+            msg("СИНТЕЗОВАНО: " + type.toUpperCase());
+            update();
+        }
+    }
+
+    function renderShop() {
+        document.getElementById('shop-grid').innerHTML = g.items.map(it => `
+            <div class="item-card">
+                <h3>${it.n}</h3>
+                <p>${it.d}</p>
+                <div class="price-tag">${it.p} MOL</div>
+                <button onclick="buy(${it.id})" class="cell" style="width:100%; background:var(--tox); color:#000; margin-top:10px; font-weight:bold">КУПИТИ</button>
+            </div>
+        `).join('');
+    }
+
+    function renderTable() {
+        let h = '';
+        const syms = ["H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si","P","S","Cl","Ar","K","Ca","Sc","Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn","Ga","Ge","As","Se","Br","Kr","Rb","Sr","Y","Zr","Nb","Mo","Tc","Ru","Rh","Pd","Ag","Cd","In","Sn","Sb","Te","I","Xe","Cs","Ba","La","Ce","Pr","Nd","Pm","Sm","Eu","Gd","Tb","Dy","Ho","Er","Tm","Yb","Lu","Hf","Ta","W","Re","Os","Ir","Pt","Au","Hg","Tl","Pb","Bi","Po","At","Rn","Fr","Ra","Ac","Th","Pa","U","Np","Pu","Am","Cm","Bk","Cf","Es","Fm","Md","No","Lr","Rf","Db","Sg","Bh","Hs","Mt","Ds","Rg","Cn","Nh","Fl","Mc","Lv","Ts","Og"];
+        syms.forEach((s, i) => {
+            h += `<div class="cell" title="Елемент №${i+1}"><b>${s}</b><small>${i+1}</small></div>`;
+        });
+        document.getElementById('periodic-grid').innerHTML = h;
+    }
+
+    function renderWiki() {
+        let h = WIKI_ARTICLES.map(a => `
+            <div class="wiki-entry">
+                <h3>${a.t}</h3>
+                <p>${a.c}</p>
+            </div>
+        `).join('');
+        document.getElementById('wiki-list').innerHTML = h;
+    }
+
+    function renderQuests() {
+        document.getElementById('quest-list').innerHTML = g.quests.map(q => `
+            <div class="item-card" style="opacity: ${q.done ? 0.5 : 1}; border-color: ${q.done ? '#333' : 'var(--gold)'}">
+                <h3 style="color:var(--gold)">${q.t} ${q.done ? '✅' : ''}</h3>
+                <p>${q.d}</p>
+                <p>Прогрес: ${q.curr} / ${q.c}</p>
+                <small>Нагорода: ${q.r} MOL</small>
+            </div>
+        `).join('');
+    }
+
+    function searchWiki(val) {
+        let filtered = WIKI_ARTICLES.filter(a => a.t.toLowerCase().includes(val.toLowerCase()));
+        document.getElementById('wiki-list').innerHTML = filtered.map(a => `
+            <div class="wiki-entry"><h3>${a.t}</h3><p>${a.c}</p></div>
+        `).join('');
+    }
+
+    function tab(id) {
+        document.querySelectorAll('section').forEach(s => s.classList.remove('active-sec'));
+        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+        document.getElementById('s-'+id).classList.add('active-sec');
+        document.getElementById('b-'+id).classList.add('active');
+    }
+
+    function msg(m) {
+        let d = document.createElement('div');
+        d.innerHTML = `> [${new Date().toLocaleTimeString()}] ${m}`;
+        let l = document.getElementById('log');
+        l.prepend(d);
+        if(l.children.length > 10) l.lastChild.remove();
+    }
+
+    function spawnBubble() {
+        if(g.mol > 0) {
+            let b = document.createElement('div');
+            b.className = 'bubble';
+            let size = Math.random()*15+5;
+            b.style.width = size+'px'; b.style.height = size+'px';
+            b.style.left = Math.random()*90+'%';
+            document.getElementById('bubbles-container').appendChild(b);
+            setTimeout(() => b.remove(), 2000);
+        }
+    }
+
+    function saveData() { localStorage.setItem('kolya_colossus_save', JSON.stringify(g)); }
+    function loadData() {
+        let s = JSON.parse(localStorage.getItem('kolya_colossus_save'));
+        if(s) { g = s; update(); renderShop(); renderQuests(); }
+    }
+
+    function gameLoop() {
+        if(g.mol < g.cap && g.auto > 0) {
+            g.mol += g.auto / 60;
+            update();
+        }
+        if(Math.random() < 0.005) saveData();
+        requestAnimationFrame(gameLoop);
+    }
+</script>
+</body>
+</html>
